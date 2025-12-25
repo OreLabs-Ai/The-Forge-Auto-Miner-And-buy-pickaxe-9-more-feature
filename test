@@ -1,0 +1,1112 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local ContentProvider = game:GetService("ContentProvider")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+-- // 1. KONFIGURASI (GANTI DISINI) //
+local Config = {
+    -- Masukkan Link Linkvertise Kamu (arah ke Netlify)
+    KeyLink = "https://linkvertise.com/1462244/hQYMTaDTa1jJ", 
+    
+    -- Script Target (Hub Asli)
+    TargetScript = "https://rawscripts.net/raw/The-Forge-BETA-NO-KEY-75512",
+    
+    -- Nama File Simpanan
+    SaveFile = "FLYkey.txt",
+    LoadingDuration = 3,
+    
+    -- Asset IDs untuk tema Demon (gratis dan dapat digunakan)
+    DemonSound = "rbxassetid://1234567890", -- Ganti dengan ID sound effect demon sebenarnya
+    FireParticle = "rbxassetid://1234567891", -- Ganti dengan ID particle fire sebenarnya
+    BloodTexture = "rbxassetid://1234567892", -- Ganti dengan ID texture blood sebenarnya
+    DemonIcon = "rbxassetid://1234567893", -- Ganti dengan ID icon demon sebenarnya
+}
+
+-- // 2. LOGIKA MATEMATIKA (SINKRON NETLIFY) //
+local function GetDailyKey()
+    local date = os.date("!*t") -- Wajib UTC
+    local day = date.day
+    local month = date.month
+    local year = date.year
+    
+    -- RUMUS CHAOS (SAMA DENGAN HTML)
+    local rawCode = (day * 157) + (month * 314) + (year * 12)
+    
+    if (rawCode % 2) == 0 then
+        rawCode = rawCode + 1111
+    end
+    
+    return "LYNODE-" .. tostring(rawCode)
+end
+
+-- // UTILITY FUNCTIONS //
+local function SaveKey(key)
+    if writefile then
+        pcall(function()
+            writefile(Config.SaveFile, key)
+        end)
+    end
+end
+
+local function LoadSavedKey()
+    local success, result = pcall(function()
+        if isfile and isfile(Config.SaveFile) then
+            return readfile(Config.SaveFile)
+        end
+        return nil
+    end)
+    return success and result or nil
+end
+
+local function ExecuteHub()
+    -- Jalankan di background biar gak nge-freeze UI
+    task.spawn(function()
+        local success, err = pcall(function()
+            loadstring(game:HttpGet(Config.TargetScript))()
+        end)
+        if not success then
+            warn("Failed to load hub:", err)
+        end
+    end)
+end
+
+-- // 3. CEK OTOMATIS SEBELUM UI MUNCUL (AUTO-LOGIN) //
+local saved = LoadSavedKey()
+local today = GetDailyKey()
+
+if saved == today then
+    -- Key Valid: Langsung Gass Script Asli
+    ExecuteHub()
+    return -- STOP SCRIPT DISINI. JANGAN BIKIN UI.
+end
+
+-- // DEMON THEME ASSETS & EFFECTS //
+local DemonTheme = {
+    Colors = {
+        Primary = Color3.fromRGB(139, 0, 0),      -- Dark Red
+        Secondary = Color3.fromRGB(75, 0, 130),   -- Dark Purple
+        Accent = Color3.fromRGB(255, 0, 0),       -- Blood Red
+        Background = Color3.fromRGB(10, 0, 15),   -- Near Black
+        Text = Color3.fromRGB(255, 255, 200),     -- Pale Gold
+        Glow = Color3.fromRGB(255, 100, 100)      -- Hell Glow
+    },
+    
+    Fonts = {
+        Title = Enum.Font.GothamBlack,
+        Subtitle = Enum.Font.GothamBold,
+        Body = Enum.Font.Gotham
+    },
+    
+    Icons = {
+        Demon = "💀",
+        Fire = "🔥",
+        Blood = "❤️",
+        Hell = "⚡",
+        Key = "🗝️"
+    }
+}
+
+-- // PRELOAD ASSETS //
+local function PreloadAssets()
+    local assetsToPreload = {}
+    table.insert(assetsToPreload, "rbxassetid://5371423352") -- Free fire sound
+    table.insert(assetsToPreload, "rbxassetid://5371423353") -- Free demon growl
+    
+    ContentProvider:Preload(assetsToPreload)
+end
+
+-- Create Loading Screen with Demon Theme
+local function CreateLoadingScreen(callback)
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "DemonLoadingScreen"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.IgnoreGuiInset = true
+    ScreenGui.Parent = PlayerGui
+    
+    -- Dark Background with Blood Texture Effect
+    local Background = Instance.new("Frame")
+    Background.Name = "Background"
+    Background.Size = UDim2.new(1, 0, 1, 0)
+    Background.Position = UDim2.new(0, 0, 0, 0)
+    Background.BackgroundColor3 = DemonTheme.Colors.Background
+    Background.BorderSizePixel = 0
+    Background.ZIndex = 100
+    Background.Parent = ScreenGui
+    
+    -- Hellfire Gradient Background
+    local HellGradient = Instance.new("UIGradient")
+    HellGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 0, 30)),
+        ColorSequenceKeypoint.new(0.3, Color3.fromRGB(80, 0, 50)),
+        ColorSequenceKeypoint.new(0.7, Color3.fromRGB(150, 0, 40)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 30, 30))
+    })
+    HellGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.8),
+        NumberSequenceKeypoint.new(1, 0.3)
+    })
+    HellGradient.Rotation = 90
+    HellGradient.Parent = Background
+    
+    -- Pulsating Blood Veins Effect
+    local BloodVeins = Instance.new("ImageLabel")
+    BloodVeins.Size = UDim2.new(1, 0, 1, 0)
+    BloodVeins.BackgroundTransparency = 1
+    BloodVeins.Image = "rbxassetid://8745886334" -- Free blood vein texture
+    BloodVeins.ImageColor3 = DemonTheme.Colors.Accent
+    BloodVeins.ImageTransparency = 0.7
+    BloodVeins.ZIndex = 101
+    BloodVeins.Parent = Background
+    
+    spawn(function()
+        while BloodVeins and BloodVeins.Parent do
+            -- Pulsating effect
+            BloodVeins.ImageTransparency = 0.8
+            task.wait(0.5)
+            BloodVeins.ImageTransparency = 0.6
+            task.wait(0.5)
+        end
+    end)
+    
+    -- Fire Particles Container
+    local FireParticles = Instance.new("Frame")
+    FireParticles.Size = UDim2.new(1, 0, 1, 0)
+    FireParticles.BackgroundTransparency = 1
+    FireParticles.ZIndex = 101
+    FireParticles.Parent = Background
+    
+    -- Create multiple fire particles
+    for i = 1, 50 do
+        local fireParticle = Instance.new("ImageLabel")
+        fireParticle.Size = UDim2.new(0, math.random(5, 20), 0, math.random(5, 20))
+        fireParticle.Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0)
+        fireParticle.BackgroundTransparency = 1
+        fireParticle.Image = "rbxassetid://8745886334" -- Using same texture for simplicity
+        fireParticle.ImageColor3 = Color3.fromHSV(math.random(0, 30) / 360, 1, 1) -- Red-Orange colors
+        fireParticle.ZIndex = 101
+        fireParticle.Parent = FireParticles
+        
+        -- Animate fire particles
+        spawn(function()
+            while fireParticle and fireParticle.Parent do
+                local targetPos = UDim2.new(
+                    math.random(0, 100) / 100,
+                    0,
+                    math.random(0, 50) / 100, -- Keep them in top half
+                    0
+                )
+                
+                local tween = TweenService:Create(fireParticle, TweenInfo.new(
+                    math.random(2, 5),
+                    Enum.EasingStyle.Linear,
+                    Enum.EasingDirection.Out
+                ), {
+                    Position = targetPos,
+                    ImageTransparency = math.random(30, 80) / 100,
+                    Size = UDim2.new(0, math.random(3, 25), 0, math.random(3, 25))
+                })
+                
+                tween:Play()
+                tween.Completed:Wait()
+                fireParticle.Position = UDim2.new(math.random(0, 100) / 100, 0, 1, 0) -- Reset to bottom
+            end
+        end)
+    end
+    
+    -- Hell Portal Effect (Center)
+    local HellPortal = Instance.new("Frame")
+    HellPortal.Size = UDim2.new(0, 250, 0, 250)
+    HellPortal.Position = UDim2.new(0.5, -125, 0.5, -125)
+    HellPortal.BackgroundColor3 = Color3.fromRGB(30, 0, 20)
+    HellPortal.BorderSizePixel = 0
+    HellPortal.ZIndex = 103
+    HellPortal.Parent = Background
+    
+    local PortalCorner = Instance.new("UICorner")
+    PortalCorner.CornerRadius = UDim.new(1, 0)
+    PortalCorner.Parent = HellPortal
+    
+    local PortalStroke = Instance.new("UIStroke")
+    PortalStroke.Thickness = 4
+    PortalStroke.Color = DemonTheme.Colors.Accent
+    PortalStroke.Transparency = 0.2
+    PortalStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    PortalStroke.Parent = HellPortal
+    
+    -- Animated Hell Portal Gradient
+    local PortalGradient = Instance.new("UIGradient")
+    PortalGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(100, 0, 50)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 50, 20)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 0, 50))
+    })
+    PortalGradient.Rotation = 0
+    PortalGradient.Parent = HellPortal
+    
+    spawn(function()
+        while PortalGradient and PortalGradient.Parent do
+            for rotation = 0, 360, 3 do
+                if not PortalGradient or not PortalGradient.Parent then break end
+                PortalGradient.Rotation = rotation
+                PortalStroke.Transparency = 0.2 + math.sin(os.clock() * 2) * 0.3
+                task.wait(0.03)
+            end
+        end
+    end)
+    
+    -- Demon Logo with Pulsating Glow
+    local DemonLogo = Instance.new("TextLabel")
+    DemonLogo.Size = UDim2.new(1, 0, 1, 0)
+    DemonLogo.BackgroundTransparency = 1
+    DemonLogo.Text = DemonTheme.Icons.Demon
+    DemonLogo.Font = Enum.Font.GothamBlack
+    DemonLogo.TextSize = 120
+    DemonLogo.TextColor3 = DemonTheme.Colors.Text
+    DemonLogo.ZIndex = 104
+    DemonLogo.Parent = HellPortal
+    
+    -- Pulsating Glow Effect for Logo
+    local LogoGlow = Instance.new("UIGlow")
+    LogoGlow.Color = DemonTheme.Colors.Glow
+    LogoGlow.Enabled = true
+    LogoGlow.Parent = DemonLogo
+    
+    spawn(function()
+        while LogoGlow and LogoGlow.Parent do
+            LogoGlow.Brightness = 0.8 + math.sin(os.clock() * 3) * 0.4
+            LogoGlow.Size = 40 + math.sin(os.clock() * 2) * 10
+            task.wait(0.05)
+        end
+    end)
+    
+    -- Title Text with Blood Drip Effect
+    local TitleText = Instance.new("TextLabel")
+    TitleText.Size = UDim2.new(1, 0, 0, 60)
+    TitleText.Position = UDim2.new(0, 0, 0, 180)
+    TitleText.BackgroundTransparency = 1
+    TitleText.Text = "HELLGATE SYSTEM"
+    TitleText.Font = DemonTheme.Fonts.Title
+    TitleText.TextSize = 32
+    TitleText.TextColor3 = DemonTheme.Colors.Text
+    TitleText.TextTransparency = 0
+    TitleText.ZIndex = 104
+    TitleText.Parent = Background
+    
+    -- Blood drip animation for title
+    spawn(function()
+        while TitleText and TitleText.Parent do
+            TitleText.TextColor3 = Color3.fromRGB(
+                255,
+                math.max(150, 200 + math.sin(os.clock() * 5) * 50),
+                math.max(150, 150 + math.sin(os.clock() * 3) * 50)
+            )
+            task.wait(0.05)
+        end
+    end)
+    
+    -- Subtitle with Hell Fire Text
+    local SubtitleText = Instance.new("TextLabel")
+    SubtitleText.Size = UDim2.new(1, 0, 0, 30)
+    SubtitleText.Position = UDim2.new(0, 0, 0, 230)
+    SubtitleText.BackgroundTransparency = 1
+    SubtitleText.Text = "Initializing Hell Portal..."
+    SubtitleText.Font = DemonTheme.Fonts.Subtitle
+    SubtitleText.TextSize = 18
+    SubtitleText.TextColor3 = Color3.fromRGB(255, 150, 100)
+    SubtitleText.TextTransparency = 0
+    SubtitleText.ZIndex = 104
+    SubtitleText.Parent = Background
+    
+    local loadingMessages = {
+        "Opening Hell Portal...",
+        "Summoning Demon Guardians...",
+        "Binding Blood Contracts...",
+        "Channeling Infernal Power...",
+        "Realm Access Granted..."
+    }
+    
+    spawn(function()
+        for _, message in ipairs(loadingMessages) do
+            if not SubtitleText or not SubtitleText.Parent then break end
+            SubtitleText.Text = message
+            task.wait(Config.LoadingDuration / #loadingMessages)
+        end
+    end)
+    
+    -- Blood Progress Bar
+    local ProgressContainer = Instance.new("Frame")
+    ProgressContainer.Size = UDim2.new(0, 350, 0, 12)
+    ProgressContainer.Position = UDim2.new(0.5, -175, 0, 280)
+    ProgressContainer.BackgroundColor3 = Color3.fromRGB(40, 0, 20)
+    ProgressContainer.BorderSizePixel = 0
+    ProgressContainer.ZIndex = 104
+    ProgressContainer.Parent = Background
+    
+    local ProgressCorner = Instance.new("UICorner")
+    ProgressCorner.CornerRadius = UDim.new(1, 0)
+    ProgressCorner.Parent = ProgressContainer
+    
+    local ProgressBar = Instance.new("Frame")
+    ProgressBar.Size = UDim2.new(0, 0, 1, 0)
+    ProgressBar.BackgroundColor3 = DemonTheme.Colors.Accent
+    ProgressBar.BorderSizePixel = 0
+    ProgressBar.ZIndex = 105
+    ProgressBar.Parent = ProgressContainer
+    
+    local ProgressBarCorner = Instance.new("UICorner")
+    ProgressBarCorner.CornerRadius = UDim.new(1, 0)
+    ProgressBarCorner.Parent = ProgressBar
+    
+    -- Blood drip effect on progress bar
+    local ProgressGlow = Instance.new("UIGlow")
+    ProgressGlow.Color = Color3.fromRGB(255, 50, 50)
+    ProgressGlow.Enabled = true
+    ProgressGlow.Parent = ProgressBar
+    
+    spawn(function()
+        while ProgressGlow and ProgressGlow.Parent do
+            ProgressGlow.Brightness = 0.6 + math.sin(os.clock() * 4) * 0.3
+            ProgressGlow.Size = 10 + math.sin(os.clock() * 2) * 5
+            task.wait(0.05)
+        end
+    end)
+    
+    -- Progress Text with Hell Counter
+    local ProgressText = Instance.new("TextLabel")
+    ProgressText.Size = UDim2.new(1, 0, 0, 25)
+    ProgressText.Position = UDim2.new(0, 0, 0, 300)
+    ProgressText.BackgroundTransparency = 1
+    ProgressText.Text = "0%"
+    ProgressText.Font = DemonTheme.Fonts.Subtitle
+    ProgressText.TextSize = 16
+    ProgressText.TextColor3 = Color3.fromRGB(255, 200, 150)
+    ProgressText.ZIndex = 104
+    ProgressText.Parent = Background
+    
+    spawn(function()
+        local duration = Config.LoadingDuration
+        local steps = 100
+        local stepDuration = duration / steps
+        
+        for i = 0, 100 do
+            if not ProgressBar or not ProgressBar.Parent then break end
+            ProgressBar.Size = UDim2.new(i / 100, 0, 1, 0)
+            ProgressText.Text = i .. "%"
+            
+            -- Blood drip effect when reaching certain percentages
+            if i % 25 == 0 and i > 0 then
+                ProgressText.Text = "BLOOD INFUSION: " .. i .. "%"
+                task.wait(0.3)
+                ProgressText.Text = i .. "%"
+            end
+            
+            task.wait(stepDuration)
+        end
+        
+        task.wait(0.3)
+        
+        if SubtitleText and SubtitleText.Parent then
+            SubtitleText.Text = DemonTheme.Icons.Fire .. " PORTAL OPENED! " .. DemonTheme.Icons.Fire
+            SubtitleText.TextColor3 = DemonTheme.Colors.Accent
+        end
+        
+        task.wait(0.5)
+        
+        -- Hell portal collapse animation
+        TweenService:Create(HellPortal, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0)
+        }):Play()
+        
+        task.wait(0.3)
+        
+        -- Fade out background with hellfire effect
+        TweenService:Create(Background, TweenInfo.new(0.8), {BackgroundTransparency = 1}):Play()
+        
+        for _, child in ipairs(Background:GetDescendants()) do
+            if child:IsA("GuiObject") then
+                TweenService:Create(child, TweenInfo.new(0.8), {BackgroundTransparency = 1}):Play()
+                if child:IsA("TextLabel") or child:IsA("TextButton") then
+                    TweenService:Create(child, TweenInfo.new(0.8), {TextTransparency = 1}):Play()
+                end
+                if child:IsA("UIStroke") or child:IsA("UIGlow") then
+                    TweenService:Create(child, TweenInfo.new(0.8), {Transparency = 1}):Play()
+                end
+            end
+        end
+        
+        task.wait(0.9)
+        ScreenGui:Destroy()
+        if callback then callback() end
+    end)
+    
+    -- Initial animation - hell portal opening
+    Background.BackgroundTransparency = 1
+    TweenService:Create(Background, TweenInfo.new(0.8), {BackgroundTransparency = 0}):Play()
+    
+    HellPortal.Size = UDim2.new(0, 0, 0, 0)
+    HellPortal.Position = UDim2.new(0.5, -125, 0.5, -125)
+    
+    TweenService:Create(HellPortal, TweenInfo.new(1.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 250, 0, 250)
+    }):Play()
+    
+    -- Blood drip text animation
+    TitleText.Position = UDim2.new(0, 0, 0, 250)
+    TweenService:Create(TitleText, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0, 0, 0, 180)
+    }):Play()
+end
+
+-- Create Main GUI with Demon Theme
+local function CreateMainGUI()
+    if PlayerGui:FindFirstChild("DemonKeySystem") then
+        PlayerGui:FindFirstChild("DemonKeySystem"):Destroy()
+    end
+    
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "DemonKeySystem"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.Parent = PlayerGui
+    
+    -- Dark veil background
+    local DarkVeil = Instance.new("Frame")
+    DarkVeil.Size = UDim2.new(1, 0, 1, 0)
+    DarkVeil.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    DarkVeil.BackgroundTransparency = 0.7
+    DarkVeil.ZIndex = 1
+    DarkVeil.Parent = ScreenGui
+    
+    local MainContainer = Instance.new("Frame")
+    MainContainer.Name = "MainContainer"
+    MainContainer.Size = UDim2.new(0, 450, 0, 380)
+    MainContainer.Position = UDim2.new(0.5, -225, 0.5, -190)
+    MainContainer.BackgroundTransparency = 1
+    MainContainer.Parent = ScreenGui
+    
+    -- Demon Altar Border Effect
+    local AltarFrame = Instance.new("Frame")
+    AltarFrame.Size = UDim2.new(1, 20, 1, 20)
+    AltarFrame.BackgroundTransparency = 1
+    AltarFrame.ZIndex = 1
+    AltarFrame.Parent = MainContainer
+    
+    -- Animated Hellfire Border
+    for i = 1, 8 do
+        local borderFlame = Instance.new("Frame")
+        borderFlame.Size = UDim2.new(0.125, 0, 0.125, 0)
+        borderFlame.Position = UDim2.new((i-1)*0.125, 0, 0, 0)
+        borderFlame.BackgroundTransparency = 1
+        borderFlame.ZIndex = 1
+        borderFlame.Parent = AltarFrame
+        
+        local flameImage = Instance.new("ImageLabel")
+        flameImage.Size = UDim2.new(1, 0, 1, 0)
+        flameImage.BackgroundTransparency = 1
+        flameImage.Image = "rbxassetid://8745886334" -- Fire texture
+        flameImage.ImageColor3 = Color3.fromHSV((i-1)/8, 1, 1)
+        flameImage.ZIndex = 1
+        flameImage.Parent = borderFlame
+    end
+    
+    spawn(function()
+        while AltarFrame and AltarFrame.Parent do
+            for i = 1, 8 do
+                local child = AltarFrame:GetChildren()[i]
+                if child then
+                    local flame = child:FindFirstChild("ImageLabel")
+                    if flame then
+                        flame.ImageTransparency = 0.3 + math.sin(os.clock() * 3 + i) * 0.4
+                        flame.Size = UDim2.new(1, math.sin(os.clock() * 2 + i) * 5, 1, math.sin(os.clock() * 2 + i) * 5)
+                    end
+                end
+            end
+            task.wait(0.05)
+        end
+    end)
+    
+    -- Main Demon Altar
+    local Altar = Instance.new("Frame")
+    Altar.Size = UDim2.new(1, -20, 1, -20)
+    Altar.Position = UDim2.new(0.5, 0, 0.5, 0)
+    Altar.AnchorPoint = Vector2.new(0.5, 0.5)
+    Altar.BackgroundColor3 = Color3.fromRGB(25, 0, 35)
+    Altar.BorderSizePixel = 0
+    Altar.ZIndex = 2
+    Altar.Parent = MainContainer
+    
+    local AltarCorner = Instance.new("UICorner")
+    AltarCorner.CornerRadius = UDim.new(0, 15)
+    AltarCorner.Parent = Altar
+    
+    -- Blood Rune Gradient
+    local AltarGradient = Instance.new("UIGradient")
+    AltarGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 0, 60)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(80, 0, 40)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 0, 60))
+    })
+    AltarGradient.Rotation = 45
+    AltarGradient.Parent = Altar
+    
+    -- Pulsating Altar Glow
+    local AltarGlow = Instance.new("UIGlow")
+    AltarGlow.Color = DemonTheme.Colors.Glow
+    AltarGlow.Brightness = 0.3
+    AltarGlow.Size = 10
+    AltarGlow.Enabled = true
+    AltarGlow.Parent = Altar
+    
+    spawn(function()
+        while AltarGlow and AltarGlow.Parent do
+            AltarGlow.Brightness = 0.2 + math.sin(os.clock() * 2) * 0.4
+            AltarGlow.Size = 8 + math.sin(os.clock() * 3) * 5
+            task.wait(0.05)
+        end
+    end)
+    
+    -- Title with Demon Sigil
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, -40, 0, 60)
+    Title.Position = UDim2.new(0, 20, 0, 15)
+    Title.BackgroundTransparency = 1
+    Title.Text = DemonTheme.Icons.Fire .. " HELLGATE KEY SYSTEM " .. DemonTheme.Icons.Fire
+    Title.Font = DemonTheme.Fonts.Title
+    Title.TextSize = 22
+    Title.TextColor3 = DemonTheme.Colors.Text
+    Title.TextXAlignment = Enum.TextXAlignment.Center
+    Title.ZIndex = 3
+    Title.Parent = Altar
+    
+    -- Animated title glow
+    local TitleGlow = Instance.new("UIGlow")
+    TitleGlow.Color = Color3.fromRGB(255, 100, 50)
+    TitleGlow.Enabled = true
+    TitleGlow.Parent = Title
+    
+    spawn(function()
+        while TitleGlow and TitleGlow.Parent do
+            TitleGlow.Brightness = 0.4 + math.sin(os.clock() * 4) * 0.3
+            task.wait(0.05)
+        end
+    end)
+    
+    -- Subtitle with Blood Warning
+    local Subtitle = Instance.new("TextLabel")
+    Subtitle.Size = UDim2.new(1, -40, 0, 25)
+    Subtitle.Position = UDim2.new(0, 20, 0, 60)
+    Subtitle.BackgroundTransparency = 1
+    Subtitle.Text = "⚠️ Enter your blood-bound key to access the infernal realm"
+    Subtitle.Font = DemonTheme.Fonts.Subtitle
+    Subtitle.TextSize = 14
+    Subtitle.TextColor3 = Color3.fromRGB(255, 150, 100)
+    Subtitle.TextXAlignment = Enum.TextXAlignment.Center
+    Subtitle.ZIndex = 3
+    Subtitle.Parent = Altar
+    
+    -- Blood Sacrifice Input Container
+    local InputContainer = Instance.new("Frame")
+    InputContainer.Size = UDim2.new(1, -40, 0, 60)
+    InputContainer.Position = UDim2.new(0, 20, 0, 110)
+    InputContainer.BackgroundColor3 = Color3.fromRGB(40, 0, 30)
+    InputContainer.BorderSizePixel = 0
+    InputContainer.ZIndex = 3
+    InputContainer.Parent = Altar
+    
+    local InputCorner = Instance.new("UICorner")
+    InputCorner.CornerRadius = UDim.new(0, 12)
+    InputCorner.Parent = InputContainer
+    
+    local InputStroke = Instance.new("UIStroke")
+    InputStroke.Thickness = 3
+    InputStroke.Color = DemonTheme.Colors.Accent
+    InputStroke.Transparency = 0.3
+    InputStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    InputStroke.Parent = InputContainer
+    
+    -- Blood drip effect on input
+    local InputGlow = Instance.new("UIGlow")
+    InputGlow.Color = DemonTheme.Colors.Glow
+    InputGlow.Enabled = true
+    InputGlow.Parent = InputContainer
+    
+    spawn(function()
+        while InputGlow and InputGlow.Parent do
+            InputGlow.Brightness = 0.2 + math.sin(os.clock() * 3) * 0.2
+            task.wait(0.05)
+        end
+    end)
+    
+    local KeyInput = Instance.new("TextBox")
+    KeyInput.Size = UDim2.new(1, -20, 1, 0)
+    KeyInput.Position = UDim2.new(0, 10, 0, 0)
+    KeyInput.BackgroundTransparency = 1
+    KeyInput.PlaceholderText = "•••••••• BLOOD KEY ••••••••"
+    KeyInput.PlaceholderColor3 = Color3.fromRGB(150, 50, 50)
+    KeyInput.Text = ""
+    KeyInput.Font = DemonTheme.Fonts.Body
+    KeyInput.TextSize = 16
+    KeyInput.TextColor3 = Color3.fromRGB(255, 220, 200)
+    KeyInput.TextXAlignment = Enum.TextXAlignment.Center
+    KeyInput.ClearTextOnFocus = false
+    KeyInput.ZIndex = 4
+    KeyInput.Parent = InputContainer
+    
+    -- DEMONIC VERIFY BUTTON (Blood Sacrifice)
+    local SubmitBtn = Instance.new("TextButton")
+    SubmitBtn.Size = UDim2.new(1, -40, 0, 60)
+    SubmitBtn.Position = UDim2.new(0, 20, 0, 190)
+    SubmitBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 30)
+    SubmitBtn.BorderSizePixel = 0
+    SubmitBtn.Text = DemonTheme.Icons.Blood .. " SACRIFICE BLOOD & BIND KEY " .. DemonTheme.Icons.Blood
+    SubmitBtn.Font = DemonTheme.Fonts.Subtitle
+    SubmitBtn.TextSize = 15
+    SubmitBtn.TextColor3 = Color3.fromRGB(255, 220, 200)
+    SubmitBtn.AutoButtonColor = false
+    SubmitBtn.ZIndex = 3
+    SubmitBtn.Parent = Altar
+    
+    local SubmitCorner = Instance.new("UICorner")
+    SubmitCorner.CornerRadius = UDim.new(0, 12)
+    SubmitCorner.Parent = SubmitBtn
+    
+    local SubmitGlow = Instance.new("UIGlow")
+    SubmitGlow.Color = DemonTheme.Colors.Accent
+    SubmitGlow.Enabled = true
+    SubmitGlow.Parent = SubmitBtn
+    
+    -- HELL PORTAL BUTTON (Get Key)
+    local GetKeyBtn = Instance.new("TextButton")
+    GetKeyBtn.Size = UDim2.new(0.48, -5, 0, 50)
+    GetKeyBtn.Position = UDim2.new(0, 20, 0, 270)
+    GetKeyBtn.BackgroundColor3 = Color3.fromRGB(60, 0, 40)
+    GetKeyBtn.BorderSizePixel = 0
+    GetKeyBtn.Text = DemonTheme.Icons.Hell .. " HELL PORTAL"
+    GetKeyBtn.Font = DemonTheme.Fonts.Subtitle
+    GetKeyBtn.TextSize = 14
+    GetKeyBtn.TextColor3 = Color3.fromRGB(255, 200, 150)
+    GetKeyBtn.AutoButtonColor = false
+    GetKeyBtn.ZIndex = 3
+    GetKeyBtn.Parent = Altar
+    
+    local GetKeyCorner = Instance.new("UICorner")
+    GetKeyCorner.CornerRadius = UDim.new(0, 10)
+    GetKeyCorner.Parent = GetKeyBtn
+    
+    -- MINIMIZE BUTTON (Seal Portal)
+    local MinimizeBtn = Instance.new("TextButton")
+    MinimizeBtn.Size = UDim2.new(0.48, -5, 0, 50)
+    MinimizeBtn.Position = UDim2.new(0.52, 5, 0, 270)
+    MinimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 0, 40)
+    MinimizeBtn.BorderSizePixel = 0
+    MinimizeBtn.Text = "🩸 SEAL PORTAL"
+    MinimizeBtn.Font = DemonTheme.Fonts.Subtitle
+    MinimizeBtn.TextSize = 14
+    MinimizeBtn.TextColor3 = Color3.fromRGB(255, 180, 180)
+    MinimizeBtn.AutoButtonColor = false
+    MinimizeBtn.ZIndex = 3
+    MinimizeBtn.Parent = Altar
+    
+    local MinimizeCorner = Instance.new("UICorner")
+    MinimizeCorner.CornerRadius = UDim.new(0, 10)
+    MinimizeCorner.Parent = MinimizeBtn
+    
+    -- Status Label (Blood Messages)
+    local StatusLabel = Instance.new("TextLabel")
+    StatusLabel.Size = UDim2.new(1, -40, 0, 25)
+    StatusLabel.Position = UDim2.new(0, 20, 1, -40)
+    StatusLabel.BackgroundTransparency = 1
+    StatusLabel.Text = ""
+    StatusLabel.Font = DemonTheme.Fonts.Body
+    StatusLabel.TextSize = 13
+    StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+    StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
+    StatusLabel.ZIndex = 3
+    StatusLabel.Parent = Altar
+    
+    -- Demon Orb (Minimized form)
+    local DemonOrb = Instance.new("Frame")
+    DemonOrb.Size = UDim2.new(0, 80, 0, 80)
+    DemonOrb.Position = UDim2.new(1, -100, 1, -100)
+    DemonOrb.BackgroundColor3 = Color3.fromRGB(40, 0, 30)
+    DemonOrb.BorderSizePixel = 0
+    DemonOrb.Visible = false
+    DemonOrb.Parent = ScreenGui
+    
+    local OrbCorner = Instance.new("UICorner")
+    OrbCorner.CornerRadius = UDim.new(1, 0)
+    OrbCorner.Parent = DemonOrb
+    
+    local OrbStroke = Instance.new("UIStroke")
+    OrbStroke.Thickness = 4
+    OrbStroke.Color = DemonTheme.Colors.Accent
+    OrbStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    OrbStroke.Parent = DemonOrb
+    
+    local OrbGlow = Instance.new("UIGlow")
+    OrbGlow.Color = Color3.fromRGB(255, 50, 50)
+    OrbGlow.Enabled = true
+    OrbGlow.Parent = DemonOrb
+    
+    local OrbButton = Instance.new("TextButton")
+    OrbButton.Size = UDim2.new(1, 0, 1, 0)
+    OrbButton.BackgroundTransparency = 1
+    OrbButton.Text = DemonTheme.Icons.Demon
+    OrbButton.Font = Enum.Font.GothamBlack
+    OrbButton.TextSize = 40
+    OrbButton.TextColor3 = DemonTheme.Colors.Text
+    OrbButton.ZIndex = 2
+    OrbButton.Parent = DemonOrb
+    
+    -- Utility Functions for Demon Theme
+    local function ShowStatus(msg, color)
+        StatusLabel.Text = msg
+        StatusLabel.TextColor3 = color or Color3.fromRGB(255, 100, 100)
+        
+        -- Blood text effect
+        StatusLabel.TextTransparency = 1
+        TweenService:Create(StatusLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+        
+        -- Blood drip animation
+        spawn(function()
+            local originalSize = StatusLabel.TextSize
+            for i = 1, 3 do
+                StatusLabel.TextSize = originalSize + 3
+                task.wait(0.1)
+                StatusLabel.TextSize = originalSize
+                task.wait(0.1)
+            end
+        end)
+        
+        task.wait(3)
+        TweenService:Create(StatusLabel, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+        task.wait(0.3)
+        StatusLabel.Text = ""
+    end
+    
+    local function ButtonHoverEffect(button, glowColor)
+        button.MouseEnter:Connect(function()
+            local originalColor = button.BackgroundColor3
+            
+            TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                BackgroundColor3 = Color3.fromRGB(
+                    math.min(255, originalColor.R * 1.2),
+                    math.min(255, originalColor.G * 1.2),
+                    math.min(255, originalColor.B * 1.2)
+                ),
+                Size = button.Size + UDim2.new(0, 6, 0, 3)
+            }):Play()
+            
+            -- Intensify glow on hover
+            local glow = button:FindFirstChild("UIGlow")
+            if glow then
+                TweenService:Create(glow, TweenInfo.new(0.2), {
+                    Brightness = 0.8,
+                    Size = 15
+                }):Play()
+            end
+        end)
+        
+        button.MouseLeave:Connect(function()
+            local originalColor = button.BackgroundColor3
+            
+            TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                BackgroundColor3 = originalColor,
+                Size = button.Size - UDim2.new(0, 6, 0, 3)
+            }):Play()
+            
+            local glow = button:FindFirstChild("UIGlow")
+            if glow then
+                TweenService:Create(glow, TweenInfo.new(0.2), {
+                    Brightness = 0.4,
+                    Size = 8
+                }):Play()
+            end
+        end)
+    end
+    
+    -- Apply hover effects
+    ButtonHoverEffect(SubmitBtn, Color3.fromRGB(255, 50, 50))
+    ButtonHoverEffect(GetKeyBtn, Color3.fromRGB(255, 150, 50))
+    ButtonHoverEffect(MinimizeBtn, Color3.fromRGB(255, 100, 100))
+    
+    -- === SUNTIKAN LOGIKA UTAMA (VERIFY KEY) ===
+    SubmitBtn.MouseButton1Click:Connect(function()
+        local input = KeyInput.Text
+        local TodayKey = GetDailyKey() -- Logika Netlify
+        
+        if input == TodayKey then
+            -- KEY BENAR - Hell portal opens
+            ShowStatus(DemonTheme.Icons.Fire .. " BLOOD KEY ACCEPTED! ENTERING HELLGATE... " .. DemonTheme.Icons.Fire, Color3.fromRGB(100, 255, 150))
+            
+            TweenService:Create(SubmitBtn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 100, 50)}):Play()
+            
+            -- Blood sacrifice animation
+            local bloodSacrifice = Instance.new("Frame")
+            bloodSacrifice.Size = UDim2.new(1, 0, 1, 0)
+            bloodSacrifice.BackgroundColor3 = DemonTheme.Colors.Accent
+            bloodSacrifice.BackgroundTransparency = 0.8
+            bloodSacrifice.ZIndex = 100
+            bloodSacrifice.Parent = Altar
+            
+            TweenService:Create(bloodSacrifice, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+            
+            -- Simpan Key
+            SaveKey(input)
+            
+            -- Jalankan Script Hub (Langsung)
+            ExecuteHub()
+            
+            -- Hell portal collapse animation
+            task.wait(1.2)
+            TweenService:Create(MainContainer, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+                Size = UDim2.new(0, 0, 0, 0),
+                Position = UDim2.new(0.5, 0, 0.5, 0)
+            }):Play()
+            
+            -- Final blood splatter effect
+            task.wait(0.3)
+            for i = 1, 5 do
+                local splatter = Instance.new("Frame")
+                splatter.Size = UDim2.new(0, math.random(20, 50), 0, math.random(20, 50))
+                splatter.Position = UDim2.new(math.random(0, 100)/100, 0, math.random(0, 100)/100, 0)
+                splatter.BackgroundColor3 = DemonTheme.Colors.Accent
+                splatter.BackgroundTransparency = 0.5
+                splatter.ZIndex = 101
+                splatter.Parent = ScreenGui
+                
+                TweenService:Create(splatter, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                    Position = UDim2.new(math.random(0, 100)/100, 0, math.random(0, 100)/100, 0),
+                    Size = UDim2.new(0, 0, 0, 0),
+                    BackgroundTransparency = 1
+                }):Play()
+                
+                task.wait(0.1)
+            end
+            
+            task.wait(0.7)
+            ScreenGui:Destroy()
+        else
+            -- KEY SALAH - Blood rejection
+            ShowStatus(DemonTheme.Icons.Blood .. " BLOOD REJECTED! SACRIFICE FAILED " .. DemonTheme.Icons.Blood, Color3.fromRGB(255, 50, 50))
+            
+            -- Blood splatter effect on failure
+            for i = 1, 3 do
+                local splatter = Instance.new("Frame")
+                splatter.Size = UDim2.new(0, math.random(15, 30), 0, math.random(15, 30))
+                splatter.Position = UDim2.new(0.5 + math.random(-20, 20)/100, 0, 0.5 + math.random(-20, 20)/100, 0)
+                splatter.BackgroundColor3 = DemonTheme.Colors.Accent
+                splatter.BackgroundTransparency = 0.7
+                splatter.ZIndex = 100
+                splatter.Parent = InputContainer
+                
+                TweenService:Create(splatter, TweenInfo.new(0.3), {
+                    Size = UDim2.new(0, 0, 0, 0),
+                    BackgroundTransparency = 1
+                }):Play()
+                
+                task.wait(0.1)
+            end
+            
+            -- Screen shake effect
+            for i = 1, 3 do
+                MainContainer.Position = MainContainer.Position + UDim2.new(0, math.random(-5, 5), 0, math.random(-5, 5))
+                task.wait(0.05)
+                MainContainer.Position = MainContainer.Position - UDim2.new(0, math.random(-5, 5), 0, math.random(-5, 5))
+                task.wait(0.05)
+            end
+        end
+    end)
+    
+    -- SUNTIKAN GET KEY (Hell Portal)
+    GetKeyBtn.MouseButton1Click:Connect(function()
+        local success = pcall(function()
+            setclipboard(Config.KeyLink)
+        end)
+        
+        if success then
+            ShowStatus(DemonTheme.Icons.Hell .. " HELL PORTAL LINK COPIED! JUMP THROUGH... " .. DemonTheme.Icons.Hell, Color3.fromRGB(255, 150, 50))
+            
+            -- Portal opening animation
+            TweenService:Create(GetKeyBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(150, 50, 0)}):Play()
+            task.wait(0.3)
+            TweenService:Create(GetKeyBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 0, 40)}):Play()
+            
+            -- Visual portal effect
+            local portal = Instance.new("Frame")
+            portal.Size = UDim2.new(1, 0, 1, 0)
+            portal.Position = UDim2.new(0.5, 0, 0.5, 0)
+            portal.AnchorPoint = Vector2.new(0.5, 0.5)
+            portal.BackgroundColor3 = Color3.fromRGB(100, 0, 200)
+            portal.BackgroundTransparency = 0.7
+            portal.ZIndex = 99
+            portal.Parent = GetKeyBtn
+            
+            local portalCorner = Instance.new("UICorner")
+            portalCorner.CornerRadius = UDim.new(1, 0)
+            portalCorner.Parent = portal
+            
+            TweenService:Create(portal, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = UDim2.new(2, 0, 2, 0),
+                BackgroundTransparency = 1
+            }):Play()
+            
+            task.wait(0.5)
+            portal:Destroy()
+        else
+            ShowStatus("❌ ANCIENT MAGIC BLOCKS CLIPBOARD", Color3.fromRGB(255, 50, 50))
+        end
+    end)
+    
+    MinimizeBtn.MouseButton1Click:Connect(function()
+        ShowStatus("🩸 PORTAL SEALED... AWAITING NEXT SACRIFICE", Color3.fromRGB(200, 100, 150))
+        
+        -- Hell portal closing animation
+        TweenService:Create(MainContainer, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0)
+        }):Play()
+        
+        task.wait(0.4)
+        MainContainer.Visible = false
+        DemonOrb.Visible = true
+        
+        DemonOrb.Size = UDim2.new(0, 0, 0, 0)
+        TweenService:Create(DemonOrb, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 80, 0, 80)
+        }):Play()
+        
+        -- Orb pulsing effect
+        spawn(function()
+            while DemonOrb.Visible and DemonOrb.Parent do
+                OrbGlow.Brightness = 0.6 + math.sin(os.clock() * 3) * 0.4
+                task.wait(0.05)
+            end
+        end)
+    end)
+    
+    OrbButton.MouseButton1Click:Connect(function()
+        ShowStatus("🔥 HELL PORTAL REOPENING...", Color3.fromRGB(255, 100, 50))
+        
+        TweenService:Create(DemonOrb, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0)
+        }):Play()
+        
+        task.wait(0.4)
+        DemonOrb.Visible = false
+        MainContainer.Visible = true
+        
+        MainContainer.Size = UDim2.new(0, 0, 0, 0)
+        MainContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
+        
+        TweenService:Create(MainContainer, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 450, 0, 380),
+            Position = UDim2.new(0.5, -225, 0.5, -190)
+        }):Play()
+    end)
+    
+    -- Draggable functionality for main altar
+    local dragging, dragInput, dragStart, startPos
+    
+    Altar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainContainer.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    Altar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            MainContainer.Position = UDim2.new(
+                startPos.X.Scale, 
+                startPos.X.Offset + delta.X, 
+                startPos.Y.Scale, 
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+    
+    -- Draggable functionality for demon orb
+    local ballDragging, ballDragInput, ballDragStart, ballStartPos
+    
+    OrbButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            ballDragging = true
+            ballDragStart = input.Position
+            ballStartPos = DemonOrb.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    ballDragging = false
+                end
+            end)
+        end
+    end)
+    
+    OrbButton.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            ballDragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == ballDragInput and ballDragging then
+            local delta = input.Position - ballDragStart
+            DemonOrb.Position = UDim2.new(
+                ballStartPos.X.Scale, 
+                ballStartPos.X.Offset + delta.X, 
+                ballStartPos.Y.Scale, 
+                ballStartPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+    
+    -- Initial entrance animation
+    MainContainer.Size = UDim2.new(0, 0, 0, 0)
+    MainContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
+    
+    -- Hell portal opening animation
+    TweenService:Create(MainContainer, TweenInfo.new(0.8, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 450, 0, 380),
+        Position = UDim2.new(0.5, -225, 0.5, -190)
+    }):Play()
+    
+    -- Blood drip text animation on entrance
+    task.spawn(function()
+        task.wait(0.5)
+        Title.TextTransparency = 1
+        TweenService:Create(Title, TweenInfo.new(0.5), {TextTransparency = 0}):Play()
+        
+        task.wait(0.3)
+        Subtitle.TextTransparency = 1
+        TweenService:Create(Subtitle, TweenInfo.new(0.5), {TextTransparency = 0}):Play()
+    end)
+end
+
+-- Initialize with Demon Loading Screen
+task.spawn(function()
+    PreloadAssets()
+    CreateLoadingScreen(function()
+        CreateMainGUI()
+    end)
+end)
+
+print("🔥 DEMON KEY SYSTEM LOADED SUCCESSFULLY! HELLGATE SECURE 🔥")
